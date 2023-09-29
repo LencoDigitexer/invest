@@ -3,6 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Автоследование Тинькофф Инвестиции | Единая таблица</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Include Bootstrap CSS -->
     <link
       rel="stylesheet"
@@ -54,7 +55,11 @@
   </head>
   <body>
     <div>
-      <a href="#" id="downloadLink">Скачать файл</a>
+        <h1>Стратегии Инвестирования Тинькофф (Автоследование)</h1>
+        <p>Эта таблица содержит данные о различных инвестиционных стратегиях. Здесь вы можете найти информацию о названии стратегии, валюте, уровне риска, оценке, владельце и других характеристиках стратегий.</p>
+        <p>Вы можете просматривать и сортировать стратегии по разным параметрам, а также скачать эту информацию в формате CSV для последующего анализа.</p>
+
+      <a href="invest-strategy.xlsx" id="downloadLink1">Скачать файл</a>
       <table class="table table-bordered table-hover">
         <thead>
           <tr>
@@ -119,7 +124,7 @@
           data.owner.socialProfile.image
         ) {
           const imageSrc = `https://www.tinkoff.ru/api/invest-gw/social/file/v1/cache/profile/avatar/${data.owner.socialProfile.image}?size=small&appName=invest&platform=web`;
-          profileHtml = `<img src="${imageSrc}" width="30" height="30" loading="lazy"><br>${data.owner.socialProfile.nickname}`;
+          profileHtml = `<img src="${imageSrc}" width="30" height="30" loading="lazy">${data.owner.socialProfile.nickname}`;
         } else if (
           data.owner &&
           data.owner.socialProfile &&
@@ -185,106 +190,37 @@
       }
 
       async function fetchDataAndRenderTable() {
-        const baseUrl =
-          "https://www.tinkoff.ru/api/invest-gw/tracking/api/v1/strategy/catalog?limit=200";
+        const baseUrl = "https://www.tinkoff.ru/api/invest-gw/tracking/api/v1/strategy/catalog?limit=200";
         const headers = {
-          "x-app-name": "invest",
-          "x-app-version": "1.350.0",
-          "x-platform": "web",
+            "x-app-name": "invest",
+            "x-app-version": "1.350.0",
+            "x-platform": "web",
         };
 
-        let allData = [];
         let hasNext = true;
         let nextUrl = baseUrl;
         let i = 1;
 
         while (hasNext) {
-          const response = await fetchDataFromAPI(nextUrl, headers);
-          i++;
-          if (response.items && Array.isArray(response.items)) {
-            allData = allData.concat(response.items);
-          }
+            const response = await fetchDataFromAPI(nextUrl, headers);
 
-          hasNext = response.hasNext || false;
+            if (response.items && Array.isArray(response.items)) {
+                const tableRows = await Promise.all(
+                    response.items.map(async (item) => {
+                        return generateTableRow(item, i++);
+                    })
+                );
+                tableBody.innerHTML += tableRows.join("\n");
+            }
 
-          if (hasNext && response.nextCursor) {
-            const nextCursor = response.nextCursor;
-            nextUrl = `${baseUrl}&cursor=${nextCursor}`;
-          }
+            hasNext = response.hasNext || false;
+
+            if (hasNext && response.nextCursor) {
+                const nextCursor = response.nextCursor;
+                nextUrl = `${baseUrl}&cursor=${nextCursor}`;
+            }
         }
-
-        const csvData = [
-          [
-            "№",
-            "Название",
-            "Валюта",
-            "Риск",
-            "Оценка",
-            "Владелец",
-            "Советуем вложить",
-            "Минимальная сумма",
-            "Подписаны",
-            "Прогноз",
-            "За все время",
-            "Короткое описание",
-            "Описание владельца",
-          ],
-        ];
-        allData.forEach((item, i) => {
-          csvData.push([
-            i + 1,
-            item.title,
-            item.baseCurrency,
-            item.riskProfile,
-            item.score,
-            item.owner.socialProfile.nickname,
-            (item.characteristics &&
-              item.characteristics[0] &&
-              item.characteristics[0].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[1] &&
-              item.characteristics[1].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[2] &&
-              item.characteristics[2].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[3] &&
-              item.characteristics[3].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[4] &&
-              item.characteristics[4].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[5] &&
-              item.characteristics[5].value) ||
-              "",
-            (item.characteristics &&
-              item.characteristics[6] &&
-              item.characteristics[6].value) ||
-              "",
-          ]);
-        });
-
-        // Generate CSV file
-        const csvContent = csvData.map((row) => row.join(",")).join("\n");
-        const blob = new Blob([csvContent], {
-          type: "text/csv;charset=utf-8;",
-        });
-        const downloadUrl = URL.createObjectURL(blob);
-        downloadLink.href = downloadUrl;
-
-        // Render table rows
-        const tableRows = await Promise.all(
-          allData.map(async (item, i) => {
-            return generateTableRow(item, i + 1);
-          })
-        );
-        tableBody.innerHTML = tableRows.join("\n");
-      }
+    }
 
       fetchDataAndRenderTable();
     </script>
