@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Автоследование Тинькофф Инвестиции | Единая таблица</title>
+    <!-- Include Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+      (function (m, e, t, r, i, k, a) {
+        m[i] =
+          m[i] ||
+          function () {
+            (m[i].a = m[i].a || []).push(arguments);
+          };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+          if (document.scripts[j].src === r) {
+            return;
+          }
+        }
+        (k = e.createElement(t)),
+          (a = e.getElementsByTagName(t)[0]),
+          (k.async = 1),
+          (k.src = r),
+          a.parentNode.insertBefore(k, a);
+      })(
+        window,
+        document,
+        "script",
+        "https://mc.yandex.ru/metrika/tag.js",
+        "ym"
+      );
+
+      ym(95101148, "init", {
+        clickmap: true,
+        trackLinks: true,
+        accurateTrackBounce: true,
+        webvisor: true,
+      });
+    </script>
+    <noscript
+      ><div>
+        <img
+          src="https://mc.yandex.ru/watch/95101148"
+          style="position: absolute; left: -9999px"
+          alt=""
+        /></div
+    ></noscript>
+    <!-- /Yandex.Metrika counter -->
+  </head>
+  <body>
+    <div>
+      <a href="#" id="downloadLink">Скачать файл</a>
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Название</th>
+            <th>Валюта</th>
+            <th>Риск</th>
+            <th>Оценка</th>
+            <th>Владелец</th>
+            <th>Советуем вложить</th>
+            <th>Минимальная сумма</th>
+            <th>Подписаны</th>
+            <th>Прогноз</th>
+            <th>За все время</th>
+            <th>Короткое описание</th>
+            <th>Описание владельца</th>
+            <th>Топ торгуемых бумаг</th>
+            <th>Выбор Тинькофф</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Include Bootstrap JS (for sorting) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const downloadLink = document.getElementById("downloadLink");
+      const tableBody = document.getElementById("tableBody");
+
+      async function fetchDataFromAPI(url, headers) {
+        const response = await fetch(url, { headers });
+        const data = await response.json();
+        return data;
+      }
+
+      async function generateTableRow(data, i) {
+        const tagsHtml = (data.tags || [])
+          .map((tag) => "<td> + </td>")
+          .join("");
+
+        let topPositionsHtml = "";
+        const topPositions = (data.characteristics || []).find(
+          (char) => char.id === "master-portfolio-top-positions"
+        );
+        if (topPositions && topPositions.value) {
+          const positions = topPositions.value.split(",");
+          topPositionsHtml = positions
+            .map((position) => {
+              const positionName = position.trim().replace(".png", "");
+              const imageSrc = `https://invest-brands.cdn-tinkoff.ru/${positionName}x160.png`;
+              return `<a href="https://yandex.ru/search/?text=акция ${positionName}" target="_blank"><img src="${imageSrc}" width="30" height="30" loading="lazy"></a>`;
+            })
+            .join("");
+        }
+
+        let profileHtml = "";
+        if (
+          data.owner &&
+          data.owner.socialProfile &&
+          data.owner.socialProfile.image
+        ) {
+          const imageSrc = `https://www.tinkoff.ru/api/invest-gw/social/file/v1/cache/profile/avatar/${data.owner.socialProfile.image}?size=small&appName=invest&platform=web`;
+          profileHtml = `<img src="${imageSrc}" width="30" height="30" loading="lazy"><br>${data.owner.socialProfile.nickname}`;
+        } else if (
+          data.owner &&
+          data.owner.socialProfile &&
+          data.owner.socialProfile.nickname
+        ) {
+          profileHtml = data.owner.socialProfile.nickname;
+        }
+
+        const rowHtml = `<tr>
+                <td>${i}</td>
+                <td>${data.title}</td>
+                <td>${data.baseCurrency}</td>
+                <td>${data.riskProfile}</td>
+                <td>${data.score}</td>
+                <td>${profileHtml}</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[0] &&
+                    data.characteristics[0].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[1] &&
+                    data.characteristics[1].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[2] &&
+                    data.characteristics[2].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[3] &&
+                    data.characteristics[3].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[4] &&
+                    data.characteristics[4].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[5] &&
+                    data.characteristics[5].value) ||
+                  ""
+                }</td>
+                <td>${
+                  (data.characteristics &&
+                    data.characteristics[6] &&
+                    data.characteristics[6].value) ||
+                  ""
+                }</td>
+                <td>${topPositionsHtml}</td>
+                ${tagsHtml}
+            </tr>`;
+
+        return rowHtml;
+      }
+
+      async function fetchDataAndRenderTable() {
+        const baseUrl =
+          "https://www.tinkoff.ru/api/invest-gw/tracking/api/v1/strategy/catalog?limit=200";
+        const headers = {
+          "x-app-name": "invest",
+          "x-app-version": "1.350.0",
+          "x-platform": "web",
+        };
+
+        let allData = [];
+        let hasNext = true;
+        let nextUrl = baseUrl;
+        let i = 1;
+
+        while (hasNext) {
+          const response = await fetchDataFromAPI(nextUrl, headers);
+          i++;
+          if (response.items && Array.isArray(response.items)) {
+            allData = allData.concat(response.items);
+          }
+
+          hasNext = response.hasNext || false;
+
+          if (hasNext && response.nextCursor) {
+            const nextCursor = response.nextCursor;
+            nextUrl = `${baseUrl}&cursor=${nextCursor}`;
+          }
+        }
+
+        const csvData = [
+          [
+            "№",
+            "Название",
+            "Валюта",
+            "Риск",
+            "Оценка",
+            "Владелец",
+            "Советуем вложить",
+            "Минимальная сумма",
+            "Подписаны",
+            "Прогноз",
+            "За все время",
+            "Короткое описание",
+            "Описание владельца",
+          ],
+        ];
+        allData.forEach((item, i) => {
+          csvData.push([
+            i + 1,
+            item.title,
+            item.baseCurrency,
+            item.riskProfile,
+            item.score,
+            item.owner.socialProfile.nickname,
+            (item.characteristics &&
+              item.characteristics[0] &&
+              item.characteristics[0].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[1] &&
+              item.characteristics[1].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[2] &&
+              item.characteristics[2].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[3] &&
+              item.characteristics[3].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[4] &&
+              item.characteristics[4].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[5] &&
+              item.characteristics[5].value) ||
+              "",
+            (item.characteristics &&
+              item.characteristics[6] &&
+              item.characteristics[6].value) ||
+              "",
+          ]);
+        });
+
+        // Generate CSV file
+        const csvContent = csvData.map((row) => row.join(",")).join("\n");
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const downloadUrl = URL.createObjectURL(blob);
+        downloadLink.href = downloadUrl;
+
+        // Render table rows
+        const tableRows = await Promise.all(
+          allData.map(async (item, i) => {
+            return generateTableRow(item, i + 1);
+          })
+        );
+        tableBody.innerHTML = tableRows.join("\n");
+      }
+
+      fetchDataAndRenderTable();
+    </script>
+  </body>
+</html>
